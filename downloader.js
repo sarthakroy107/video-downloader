@@ -47,6 +47,12 @@ exports.downloadHighestQualityVideo = async (req, res) => {
 
             // Create a read stream for the video file and pipe it to the response
             const videoFileStream = fs.createReadStream(filePath);
+
+            // Delete the output video file after the response is fully sent
+            res.on('finish', () => {
+              fs.unlinkSync(filePath);
+            });
+
             videoFileStream.pipe(res);
           })
           .run();
@@ -56,3 +62,22 @@ exports.downloadHighestQualityVideo = async (req, res) => {
     console.error('Error:', err.message);
   }
 };
+
+
+//Analyze youtube video
+exports.analyzeVideo = async (req, res) => {
+  try{
+    const {videoUrl} = req.body;
+    console.log(videoUrl)
+    const info = await ytdl.getInfo(videoUrl);
+    console.log(info.videoDetails);
+    return res.status(200).json({
+      data: info.videoDetails
+    })
+  }catch(err) {
+    console.log(err)
+    return res.status(500).json({
+      data:err
+    })
+  }
+}
