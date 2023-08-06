@@ -37,12 +37,20 @@ exports.downloadHighestQualityVideo = async (req, res) => {
                     // Remove the temporary video and audio files
                     fs.unlinkSync('video.mp4');
                     fs.unlinkSync('audio.webm');
-                })
-                .run();
+                    const filePath = './output.mp4'
+                    res.status(200).sendFile(__dirname + '/output.mp4', (err) => {
+                      if (err) {
+                        console.error('Error:', err.message);
+                        res.status(500).json({ error: 'Failed to download the file.' });
+                      } else {
+                        fs.unlinkSync(filePath); // Remove the downloaded file after it's sent to the client
+                      }
+                    });
+                  })
+                  .run();
             });
 
         });
-        return res.status(200)
       } catch (err) {
         console.error('Error:', err.message);
       }
