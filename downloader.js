@@ -81,3 +81,23 @@ exports.analyzeVideo = async (req, res) => {
     })
   }
 }
+
+
+//Get download options
+exports.downloadOptions = async (req, res) => {
+  const {videoUrl} = req.body;
+  console.log(videoUrl)
+  try{
+    const info = await ytdl.getInfo(videoUrl);
+    res.status(200).json({
+      success: true,
+      data: info.player_response.streamingData
+    })
+  }catch(err) {
+    res.status(200).json({
+      success: false,
+      message: "Download options fetching failed",
+      data: err
+    })
+  }
+}
