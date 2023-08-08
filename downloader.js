@@ -2,6 +2,8 @@ const ytdl = require('ytdl-core');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 
+
+//Download highest quality
 exports.downloadHighestQualityVideo = async (req, res) => {
   const { videoUrl } = req.body;
   console.log('HELLO');
@@ -62,6 +64,69 @@ exports.downloadHighestQualityVideo = async (req, res) => {
     console.error('Error:', err.message);
   }
 };
+
+
+//Download a particular quality
+exports.downloadParticularQuality = async (req, res) => {
+  
+  try{
+
+    const {videoUrl, itag} = req.body;
+    console.log(videoUrl, itag);
+
+    const info = await ytdl.getInfo(videoUrl);
+    const format = ytdl.chooseFormat(info.formats, {quality: itag});
+    // const videoFormat = ytdl.chooseFormat(info.formats, {quality: itag})
+    // const audioFormat = ytdl.chooseFormat(info.formats, {quality: 'highestaudio'})
+
+    const videoStream = ytdl.downloadFromInfo(info, { format });
+    const videoFile = fs.createWriteStream('video.mp4');
+    videoStream.pipe(videoFile);
+
+    videoFile.on('finish', async () => {
+      const audioStream = await ytdl(videoUrl, {quality: 'highestaudio'})
+      const audioFile = fs.createWriteStream('audio.webm');
+      audioStream.pipe(audioFile);
+
+      audioFile.on('finish', () => {
+        console.log('Merging video and audio streams...');
+        ffmpeg('video.mp4')
+          .input('audio.webm')
+          .videoCodec('copy')
+          .audioCodec('aac')
+          .output('output.mp4')
+          .on('end', () => {
+            console.log('Muxing completed!');
+            // Remove the temporary video and audio files
+            fs.unlinkSync('video.mp4');
+            fs.unlinkSync('audio.webm');
+            const filePath = './output.mp4';
+
+            // Set the Content-Disposition header to trigger download
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Content-Disposition', 'attachment; filename="video.mp4"');
+
+            // Create a read stream for the video file and pipe it to the response
+            const videoFileStream = fs.createReadStream(filePath);
+
+            // Delete the output video file after the response is fully sent
+            // res.on('finish', () => {
+            //   fs.unlinkSync(filePath);
+            // });
+
+            videoFileStream.pipe(res);
+          })
+          .run();
+      });
+    })
+  }catch(err) {
+    res.status(500).json({
+      succes: false,
+      data:err
+    })
+  }
+
+}
 
 
 //Analyze youtube video
