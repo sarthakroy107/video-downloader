@@ -165,6 +165,34 @@ exports.DownloadOnlyVideo = async (req, res) => {
 }
 
 
+//Download mp3
+exports.downloadMp3 = async (req, res) => {
+  
+  try{
+    const {videoUrl} = req.body;
+
+    const audioStream = ytdl(videoUrl, {quality: 'highestaudio'})
+    const audioFile = fs.createWriteStream('audio.webm');
+    
+    audioStream.pipe(audioFile);
+
+    audioFile.on('finish', async()=>{
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Disposition', 'attachment; filename="audio.mp3"');
+
+      ffmpeg('audio.webm').toFormat('mp3').output(res).run()
+
+    })
+    
+  }catch(err) {
+    return res.status(200).json({
+      succes:false,
+      data:err
+    })
+  }
+}
+
+
 //Analyze youtube video
 exports.analyzeVideo = async (req, res) => {
   try{
