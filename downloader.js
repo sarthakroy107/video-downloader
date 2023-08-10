@@ -68,9 +68,9 @@ exports.downloadHighestQualityVideo = async (req, res) => {
 
 //Download a particular quality
 exports.downloadParticularQuality = async (req, res) => {
-  
+  console.log("IN PARTICULAR DOWNLOAD ROUTE")
   try{
-
+    console.log("IN PARTICULAR DOWNLOAD ROUTE")
     const {videoUrl, itag} = req.body;
     console.log(videoUrl, itag);
 
@@ -109,10 +109,10 @@ exports.downloadParticularQuality = async (req, res) => {
             // Create a read stream for the video file and pipe it to the response
             const videoFileStream = fs.createReadStream(filePath);
 
-            // Delete the output video file after the response is fully sent
-            // res.on('finish', () => {
-            //   fs.unlinkSync(filePath);
-            // });
+            //Delete the output video file after the response is fully sent
+            res.on('finish', () => {
+              fs.unlinkSync(filePath);
+            });
 
             videoFileStream.pipe(res);
           })
@@ -129,13 +129,49 @@ exports.downloadParticularQuality = async (req, res) => {
 }
 
 
+//Download only video
+exports.DownloadOnlyVideo = async (req, res) => {
+  try{
+
+    const {videoUrl, itag} = req.body;
+    console.log(videoUrl, itag);
+
+
+    const info = await ytdl.getInfo(videoUrl);
+    const format = ytdl.chooseFormat(info.formats, {quality: itag});
+    const videoStream = ytdl.downloadFromInfo(info, { format });
+    const videoFile = fs.createWriteStream('video.mp4');
+    videoStream.pipe(videoFile);
+
+    videoFile.on('finish', async ()=>{
+      console.log("in on finish")
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', 'attachment; filename="video.mp4"');
+      const filePath = './video.mp4'
+      const videoFileStream = fs.createReadStream(filePath);
+      res.on('finish', async () => {
+        fs.unlinkSync(filePath);
+      });
+      videoFileStream.pipe(res);
+    })
+
+  }catch(err) {
+    return res.status(200).json({
+      succes: false,
+      message: "Error while fetching only video",
+      data: err
+    })
+  }
+}
+
+
 //Analyze youtube video
 exports.analyzeVideo = async (req, res) => {
   try{
     const {videoUrl} = req.body;
-    console.log(videoUrl)
+    //console.log(videoUrl)
     const info = await ytdl.getInfo(videoUrl);
-    console.log(info.videoDetails);
+    //console.log(info.videoDetails);
     return res.status(200).json({
       data: info.videoDetails
     })
@@ -151,7 +187,7 @@ exports.analyzeVideo = async (req, res) => {
 //Get download options
 exports.downloadOptions = async (req, res) => {
   const {videoUrl} = req.body;
-  console.log(videoUrl)
+  //console.log(videoUrl)
   try{
     const info = await ytdl.getInfo(videoUrl);
     res.status(200).json({
